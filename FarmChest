@@ -1,77 +1,233 @@
--- [[ CHEST FARM OPTIMIZED ]] --
-_G.AutoFarmChest = true
-_G.StopChest = true -- Dừng khi có vật phẩm hiếm
-_G.ChestESP = true
+-- ============================================
+-- CHEST FARM SCRIPT - BLOX FRUITS (OPTIMIZED)
+-- ============================================
+_G.AutoFarmChest = false
+_G.ChestBypass = false
+_G.StopChest = true
+_G.MagnitudeAdd = 0
+AutoFarmChest = false
+ChestESP = false
+Number = math.random(1, 1000000)
+local LP = game.Players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+local WS = game:GetService("Workspace")
 
-local Player = game.Players.LocalPlayer
-local Character = Player.Character or Player.CharacterAdded:Wait()
-local Root = Character:WaitForChild("HumanoidRootPart")
+-- ============================================
+-- HÀM HỖ TRỢ
+-- ============================================
+local function topos(cf)
+    pcall(function()
+        if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+            LP.Character.HumanoidRootPart.CFrame = cf
+        end
+    end)
+end
 
--- Fix lỗi đổi team (Chỉ chạy 1 lần để tránh bị Kick)
-task.spawn(function()
-    if Player.Team == nil or Player.Team.Name == "Choosing" then
-        game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
+local function getDistance(pos)
+    if LP.Character and LP.Character:FindFirstChild("HumanoidRootPart") then
+        return (LP.Character.HumanoidRootPart.Position - pos).Magnitude
     end
-end)
+    return math.huge
+end
 
--- Hàm tạo ESP rương (Sửa lỗi biến Number)
-function CreateESP(obj)
-    if not obj:FindFirstChild("ChestVisual") then
-        local bill = Instance.new("BillboardGui", obj)
-        bill.Name = "ChestVisual"
-        bill.AlwaysOnTop = true
-        bill.Size = UDim2.new(0, 100, 0, 50)
-        bill.Adornee = obj
-        
-        local txt = Instance.new("TextLabel", bill)
-        txt.Size = UDim2.new(1, 0, 1, 0)
-        txt.BackgroundTransparency = 1
-        txt.Text = obj.Name
-        txt.TextColor3 = Color3.new(0, 1, 1)
-        txt.TextStrokeTransparency = 0
+-- ============================================
+-- ESP CHO CHEST
+-- ============================================
+function UpdateChestChams()
+    for _, v in pairs(WS:GetChildren()) do
+        pcall(function()
+            if string.find(v.Name, "Chest") and v:IsA("BasePart") then
+                if ChestESP then
+                    if not v:FindFirstChild('NameEsp'..Number) then
+                        local bill = Instance.new('BillboardGui', v)
+                        bill.Name = 'NameEsp'..Number
+                        bill.Size = UDim2.new(1, 200, 1, 30)
+                        bill.AlwaysOnTop = true
+                        bill.StudsOffset = Vector3.new(0, 2, 0)
+                        
+                        local name = Instance.new('TextLabel', bill)
+                        name.Size = UDim2.new(1, 0, 1, 0)
+                        name.BackgroundTransparency = 1
+                        name.TextStrokeTransparency = 0.5
+                        name.Font = Enum.Font.GothamBold
+                        name.TextSize = 14
+                        
+                        -- Màu theo loại chest
+                        if v.Name == "Chest1" then
+                            name.TextColor3 = Color3.fromRGB(109, 109, 109)
+                        elseif v.Name == "Chest2" then
+                            name.TextColor3 = Color3.fromRGB(173, 158, 21)
+                        elseif v.Name == "Chest3" then
+                            name.TextColor3 = Color3.fromRGB(85, 255, 255)
+                        else
+                            name.TextColor3 = Color3.fromRGB(255, 255, 255)
+                        end
+                        
+                        name.Text = v.Name
+                    end
+                    
+                    -- Cập nhật khoảng cách
+                    local dist = math.floor(getDistance(v.Position)/3)
+                    v['NameEsp'..Number].TextLabel.Text = v.Name.." ["..dist.."m]"
+                else
+                    if v:FindFirstChild('NameEsp'..Number) then 
+                        v['NameEsp'..Number]:Destroy() 
+                    end
+                end
+            end
+        end)
     end
 end
 
--- Check vật phẩm quan trọng
-function HasRareItem()
+-- ============================================
+-- KIỂM TRA ITEM QUÝ
+-- ============================================
+local function hasRareItem()
     local items = {"Fist of Darkness", "God's Chalice"}
-    for _, name in pairs(items) do
-        if Player.Backpack:FindFirstChild(name) or Character:FindFirstChild(name) then
-            return true
-        end
+    for _, itemName in pairs(items) do
+        if LP.Backpack:FindFirstChild(itemName) then return true end
+        if LP.Character and LP.Character:FindFirstChild(itemName) then return true end
     end
     return false
 end
 
--- Script Farm chính
+-- ============================================
+-- DỪNG KHI CÓ ITEM QUÝ
+-- ============================================
 task.spawn(function()
-    while task.wait(0.1) do
-        if _G.AutoFarmChest then
-            if _G.StopChest and HasRareItem() then
-                print("Đã tìm thấy đồ hiếm! Dừng Farm.")
-                _G.AutoFarmChest = false
-                break
-            end
-
-            for _, v in pairs(game.Workspace:GetChildren()) do
-                if v.Name:find("Chest") and v:IsA("BasePart") then
-                    -- ESP
-                    if _G.ChestESP then CreateESP(v) end
-                    
-                    -- Teleport & Collect
-                    if _G.AutoFarmChest then
-                        repeat
-                            task.wait()
-                            Root.CFrame = v.CFrame
-                            -- Giả lập chạm rương
-                            firetouchinterest(Root, v, 0)
-                            firetouchinterest(Root, v, 1)
-                        until not v.Parent or not _G.AutoFarmChest
-                    end
-                end
-            end
+    while task.wait(1) do
+        if _G.StopChest and hasRareItem() then
+            _G.AutoFarmChest = false
+            AutoFarmChest = false
+            _G.ChestBypass = false
+            warn("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+            warn("⚠️  TÌM THẤY ITEM QUÝ!")
+            warn("⚠️  ĐÃ DỪNG FARM CHEST!")
+            warn("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
         end
     end
 end)
 
-print("=== SCRIPT ĐÃ SỬA: CHẠY ỔN ĐỊNH ===")
+-- ============================================
+-- FARM CHEST THƯỜNG
+-- ============================================
+task.spawn(function()
+    while task.wait() do
+        if AutoFarmChest and not _G.ChestBypass then
+            pcall(function()
+                if not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart") then return end
+                
+                local nearestChest = nil
+                local nearestDist = math.huge
+                
+                -- Tìm chest gần nhất
+                for _, v in pairs(WS:GetChildren()) do
+                    if string.find(v.Name, "Chest") and v:IsA("BasePart") then
+                        local dist = getDistance(v.Position)
+                        if dist < nearestDist and dist <= 5000 + _G.MagnitudeAdd then
+                            nearestChest = v
+                            nearestDist = dist
+                        end
+                    end
+                end
+                
+                -- Farm chest gần nhất
+                if nearestChest then
+                    repeat task.wait()
+                        if WS:FindFirstChild(nearestChest.Name) and AutoFarmChest then
+                            topos(nearestChest.CFrame)
+                        end
+                    until not AutoFarmChest or not nearestChest.Parent or getDistance(nearestChest.Position) > 5000 + _G.MagnitudeAdd
+                    
+                    _G.MagnitudeAdd = _G.MagnitudeAdd + 1500
+                end
+            end)
+        end
+    end
+end)
+
+-- ============================================
+-- FARM CHEST BYPASS (ĐÃ TỐI ƯU)
+-- ============================================
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.ChestBypass then
+            pcall(function()
+                if not LP.Character or not LP.Character:FindFirstChild("HumanoidRootPart") then return end
+                
+                local chests = {}
+                for _, v in pairs(WS:GetChildren()) do
+                    if string.find(v.Name, "Chest") and v:IsA("BasePart") then
+                        table.insert(chests, v)
+                    end
+                end
+                
+                -- Farm từng chest
+                for _, chest in pairs(chests) do
+                    if not _G.ChestBypass then break end
+                    
+                    -- Teleport
+                    topos(chest.CFrame)
+                    task.wait(0.1)
+                    
+                    -- Trigger touch
+                    local touch = chest:FindFirstChildOfClass("TouchTransmitter")
+                    if touch then
+                        firetouchinterest(LP.Character.HumanoidRootPart, chest, 0)
+                        task.wait(0.05)
+                        firetouchinterest(LP.Character.HumanoidRootPart, chest, 1)
+                    end
+                    
+                    -- Kiểm tra nếu có item quý thì dừng
+                    if _G.StopChest and hasRareItem() then
+                        _G.ChestBypass = false
+                        break
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- ============================================
+-- TỰ ĐỘNG CHỌN PHE PIRATES
+-- ============================================
+task.spawn(function()
+    while task.wait(5) do
+        if (_G.ChestBypass or AutoFarmChest) then
+            pcall(function()
+                if not LP.Team or LP.Team.Name ~= "Pirates" then
+                    RS.Remotes.CommF_:InvokeServer("SetTeam", "Pirates")
+                end
+            end)
+        end
+    end
+end)
+
+-- ============================================
+-- CẬP NHẬT ESP
+-- ============================================
+task.spawn(function()
+    while task.wait(2) do
+        if ChestESP then 
+            pcall(UpdateChestChams)
+        end
+    end
+end)
+
+-- ============================================
+-- THÔNG BÁO SCRIPT ĐÃ LOAD
+-- ============================================
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+print("📦 CHEST FARM SCRIPT LOADED")
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+print("")
+print("⚡ Lệnh bật farm:")
+print("  _G.ChestBypass = true     -- Farm nhanh")
+print("  AutoFarmChest = true      -- Farm thường")
+print("")
+print("🔍 Lệnh khác:")
+print("  ChestESP = true           -- Bật ESP")
+print("  _G.StopChest = true       -- Dừng khi có item quý")
+print("")
+print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
