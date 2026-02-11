@@ -11,25 +11,24 @@ local humanoid = character:WaitForChild("Humanoid")
 -- Configuration
 local CONFIG = {
     DELAY_BETWEEN_TPS = 0.25,
-    MIN_CHESTS = 7,
-    MAX_CHESTS = 10,
     HEIGHT_OFFSET = 3,
     DELAY_AFTER_RESET = 1,
     JUMP_POWER = 50,
-    JUMP_COUNT = 2
-}
-
--- Areas từ script 2
-local areas = {
-    "Colosseum", "Desert", "Fountain", "Magma", "MobBoss", "Pirate", "Prison", "Sky", "SkyArea1", "SkyArea2", "Town", "MarineBase",
-    "Fishmen", "Ice", "MarineStart", "Windmill"
+    JUMP_COUNT = 2,
+    -- Cấu hình cho reset areas
+    RESET_AREAS_ENABLED = true,
+    AREAS_ROTATION = {
+        "Colosseum", "Desert", "Fountain", "Magma", "MobBoss", "Pirate", 
+        "Prison", "Sky", "SkyArea1", "SkyArea2", "Town", "MarineBase",
+        "Fishmen", "Ice", "MarineStart", "Windmill"
+    }
 }
 
 -- Variables for chest counter
-local chestVisitCount = 0
-local currentResetTarget = math.random(CONFIG.MIN_CHESTS, CONFIG.MAX_CHESTS)
 local currentChestCFrame = nil
 local isLocked = false
+local currentAreaIndex = 1
+local targetArea = CONFIG.AREAS_ROTATION[currentAreaIndex]
 
 local function createGui()
     local gui = Instance.new("ScreenGui")
@@ -54,16 +53,16 @@ local function createGui()
     local container = Instance.new("Frame")
     container.Name = "Container"
     container.Parent = background
-    container.Size = UDim2.new(0, 400, 0, 150) -- Fixed size container
-    container.Position = UDim2.new(0.5, 0, 0.5, 0) -- Center of screen
-    container.AnchorPoint = Vector2.new(0.5, 0.5) -- Center anchor point
+    container.Size = UDim2.new(0, 400, 0, 150)
+    container.Position = UDim2.new(0.5, 0, 0.5, 0)
+    container.AnchorPoint = Vector2.new(0.5, 0.5)
     container.BackgroundTransparency = 1
     
     -- Main text
     local mainText = Instance.new("TextLabel")
     mainText.Name = "MainText"
     mainText.Parent = container
-    mainText.Size = UDim2.new(1, 0, 0.5, 0) -- Take full container width
+    mainText.Size = UDim2.new(1, 0, 0.5, 0)
     mainText.Position = UDim2.new(0, 0, 0, 0)
     mainText.BackgroundTransparency = 1
     mainText.Text = "Auto Farm Chest"
@@ -76,8 +75,8 @@ local function createGui()
     local creditText = Instance.new("TextLabel")
     creditText.Name = "CreditText"
     creditText.Parent = container
-    creditText.Size = UDim2.new(1, 0, 0.3, 0) -- Take full container width
-    creditText.Position = UDim2.new(0, 0, 0.6, 0) -- Position below main text
+    creditText.Size = UDim2.new(1, 0, 0.3, 0)
+    creditText.Position = UDim2.new(0, 0, 0.6, 0)
     creditText.BackgroundTransparency = 1
     creditText.Text = "made by VuongDacThong"
     creditText.TextColor3 = Color3.fromRGB(200, 200, 200)
@@ -102,11 +101,11 @@ local function createGui()
     -- Animation for gradient
     local tweenService = game:GetService("TweenService")
     local tweenInfo = TweenInfo.new(
-        5, -- Time
-        Enum.EasingStyle.Linear, -- Easing Style
-        Enum.EasingDirection.InOut, -- Easing Direction
-        -1, -- Repeat Count (-1 means infinite)
-        true -- Reverses
+        5,
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.InOut,
+        -1,
+        true
     )
     
     local tween = tweenService:Create(gradient, tweenInfo, {
@@ -120,7 +119,7 @@ local function createGui()
     creditText.TextTransparency = 1
     
     local fadeInfo = TweenInfo.new(
-        1, -- Time
+        1,
         Enum.EasingStyle.Quad,
         Enum.EasingDirection.Out
     )
@@ -157,15 +156,11 @@ end
 -- Force jump function
 local function forceJump()
     if humanoid and humanoid.Health > 0 then
-        -- Enable jumping if disabled
         if not humanoid.UseJumpPower then
             humanoid.UseJumpPower = true
         end
         
-        -- Set jump power
         humanoid.JumpPower = CONFIG.JUMP_POWER
-        
-        -- Force jump
         humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
         task.wait(0.1)
         humanoid.Jump = true
@@ -173,15 +168,13 @@ local function forceJump()
     end
 end
 
--- Direct teleport function with jump mechanism - CHỈ THAY ĐỔI CÁCH LẤY CHEST
+-- Direct teleport function with jump mechanism
 local function teleportToChest(area, index)
-    -- Kiểm tra character có tồn tại không
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
         warn("Character hoặc HumanoidRootPart không tìm thấy")
         return false
     end
     
-    -- Lấy chest theo cơ chế script 2: workspace.Map -> Area -> Chests
     local chestPath = workspace.Map:FindFirstChild(area)
     if not chestPath then
         return false
@@ -197,37 +190,12 @@ local function teleportToChest(area, index)
         return false
     end
     
-    -- Phần còn lại giữ nguyên như script 1
     if humanoidRootPart then
-        -- Set new chest position
         currentChestCFrame = targetChest.CFrame * CFrame.new(0, CONFIG.HEIGHT_OFFSET, 0)
-        
-        -- Instant teleport
         humanoidRootPart.CFrame = currentChestCFrame
         
-        -- Multiple jumps at the current location
         for i = 1, CONFIG.JUMP_COUNT do
             forceJump()
-        end
-        
-        -- Update chest counter
-        chestVisitCount = chestVisitCount + 1
-        
-        -- Check for reset condition
-        if chestVisitCount >= currentResetTarget then
-            print(string.format("Collected %d chests, resetting...", currentResetTarget))
-            chestVisitCount = 0
-            currentResetTarget = math.random(CONFIG.MIN_CHESTS, CONFIG.MAX_CHESTS)
-            print(string.format("Next reset will be after %d chests", currentResetTarget))
-            
-            task.wait(0.5)
-            resetCharacter()
-            
-            -- Wait for new character
-            player.CharacterAdded:Wait()
-            task.wait(CONFIG.DELAY_AFTER_RESET)
-            humanoidRootPart = player.Character:WaitForChild("HumanoidRootPart")
-            humanoid = player.Character:WaitForChild("Humanoid")
         end
         
         task.wait(CONFIG.DELAY_BETWEEN_TPS)
@@ -236,49 +204,69 @@ local function teleportToChest(area, index)
     return false
 end
 
--- Main collection loop - CHỈ THAY ĐỔI CÁCH DUYỆT QUA CHEST
+-- Main collection loop
 local function collectChestsContinuously()
     local gui, label = createGui()
     
     while true do
         local totalChestsInCycle = 0
         
-        -- Duyệt qua từng area (thay vì ChestModels folder)
-        for _, area in ipairs(areas) do
-            local chestPath = workspace.Map:FindFirstChild(area)
-            if chestPath then
-                local chestsFolder = chestPath:FindFirstChild("Chests")
-                if chestsFolder then
-                    local allChests = chestsFolder:GetChildren()
-                    
-                    -- Lấy tất cả chest trong area này
-                    for index, chest in ipairs(allChests) do
-                        if chest:IsA("BasePart") then
-                            local success = pcall(function()
-                                if teleportToChest(area, index) then
-                                    totalChestsInCycle = totalChestsInCycle + 1
-                                    print(string.format("Teleported to %s Chest %d/%d (Count %d/%d)", 
-                                        area, index, #allChests, chestVisitCount, currentResetTarget))
-                                end
-                            end)
-                            
-                            if not success then
-                                -- Nếu có lỗi, tiếp tục với chest tiếp theo
-                                -- warn("Error teleporting to:", area, index)
+        -- Chỉ farm trong khu vực mục tiêu hiện tại
+        local chestPath = workspace.Map:FindFirstChild(targetArea)
+        if chestPath then
+            local chestsFolder = chestPath:FindFirstChild("Chests")
+            if chestsFolder then
+                local allChests = chestsFolder:GetChildren()
+                
+                for index, chest in ipairs(allChests) do
+                    if chest:IsA("BasePart") then
+                        local success = pcall(function()
+                            if teleportToChest(targetArea, index) then
+                                totalChestsInCycle = totalChestsInCycle + 1
+                                print(string.format("Area: %s | Chest %d/%d", 
+                                    targetArea, index, #allChests))
                             end
-                        end
+                        end)
                     end
                 end
             end
         end
         
         if totalChestsInCycle > 0 then
-            print(string.format("All chests collected (%d chests)!", totalChestsInCycle))
+            print(string.format("All chests collected in %s (%d chests)! Resetting and switching to next area...", targetArea, totalChestsInCycle))
+            
+            -- ===== RESET NHÂN VẬT =====
+            task.wait(0.5)
+            resetCharacter()
+            
+            -- ===== CHUYỂN SANG AREA TIẾP THEO =====
+            currentAreaIndex = currentAreaIndex + 1
+            if currentAreaIndex > #CONFIG.AREAS_ROTATION then
+                currentAreaIndex = 1
+            end
+            targetArea = CONFIG.AREAS_ROTATION[currentAreaIndex]
+            print(string.format("Next area: %s", targetArea))
+            
+            -- Chờ nhân vật spawn
+            player.CharacterAdded:Wait()
+            task.wait(CONFIG.DELAY_AFTER_RESET)
+            humanoidRootPart = player.Character:WaitForChild("HumanoidRootPart")
+            humanoid = player.Character:WaitForChild("Humanoid")
+            
+            -- ===== TELEPORT ĐẾN AREA MỚI NGAY SAU KHI SPAWN =====
+            local areaPath = workspace.Map:FindFirstChild(targetArea)
+            if areaPath then
+                local spawnPoint = areaPath:FindFirstChild("SpawnLocation") or areaPath
+                if humanoidRootPart then
+                    humanoidRootPart.CFrame = spawnPoint.CFrame * CFrame.new(0, 5, 0)
+                    print(string.format("Teleported to %s!", targetArea))
+                end
+            end
+            -- ===== HẾT TELEPORT =====
         else
-            warn("No chests found in any area!")
+            warn("No chests found!")
         end
         
-        -- Add small delay after collecting all chests
         task.wait(0.1)
     end
 end
@@ -288,7 +276,6 @@ player.CharacterAdded:Connect(function(newCharacter)
     character = newCharacter
     humanoidRootPart = character:WaitForChild("HumanoidRootPart")
     humanoid = character:WaitForChild("Humanoid")
-    -- Reset position lock state
     isLocked = false
     currentChestCFrame = nil
 end)
@@ -300,7 +287,7 @@ end)
 
 -- Start the script
 if humanoidRootPart and humanoid then
-    print(string.format("Starting auto chest, will reset after %d chests", currentResetTarget))
+    print(string.format("Starting auto chest farming in %s", targetArea))
     task.spawn(collectChestsContinuously)
 else
     warn("Required character parts not found!")
