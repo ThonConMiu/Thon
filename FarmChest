@@ -10,12 +10,11 @@ local humanoid = character:WaitForChild("Humanoid")
 
 -- Configuration
 local CONFIG = {
-    DELAY_BETWEEN_TPS = 0.25,
+    DELAY_BETWEEN_TPS = 1.25,
     HEIGHT_OFFSET = 3,
     DELAY_AFTER_RESET = 1,
     JUMP_POWER = 50,
     JUMP_COUNT = 2,
-    -- Cấu hình cho reset areas
     RESET_AREAS_ENABLED = true,
     AREAS_ROTATION = {
         "Colosseum", "Desert", "Fountain", "Magma", "MobBoss", "Pirate", 
@@ -39,7 +38,6 @@ local function createGui()
     gui.ResetOnSpawn = false
     gui.Parent = player.PlayerGui
     
-    -- Background frame full screen
     local background = Instance.new("Frame")
     background.Name = "Background"
     background.Parent = gui
@@ -49,7 +47,6 @@ local function createGui()
     background.Position = UDim2.new(0, 0, 0, 0)
     background.BorderSizePixel = 0
     
-    -- Container for centered content
     local container = Instance.new("Frame")
     container.Name = "Container"
     container.Parent = background
@@ -58,7 +55,6 @@ local function createGui()
     container.AnchorPoint = Vector2.new(0.5, 0.5)
     container.BackgroundTransparency = 1
     
-    -- Main text
     local mainText = Instance.new("TextLabel")
     mainText.Name = "MainText"
     mainText.Parent = container
@@ -71,7 +67,6 @@ local function createGui()
     mainText.Font = Enum.Font.GothamBold
     mainText.AnchorPoint = Vector2.new(0, 0)
     
-    -- Credit text
     local creditText = Instance.new("TextLabel")
     creditText.Name = "CreditText"
     creditText.Parent = container
@@ -84,7 +79,6 @@ local function createGui()
     creditText.Font = Enum.Font.Gotham
     creditText.AnchorPoint = Vector2.new(0, 0)
     
-    -- Add gradient effect to background
     local gradient = Instance.new("UIGradient")
     gradient.Color = ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(0, 0, 0)),
@@ -93,12 +87,10 @@ local function createGui()
     })
     gradient.Parent = background
     
-    -- Add corner radius to background
     local corner = Instance.new("UICorner")
     corner.CornerRadius = UDim.new(0, 10)
     corner.Parent = background
     
-    -- Animation for gradient
     local tweenService = game:GetService("TweenService")
     local tweenInfo = TweenInfo.new(
         5,
@@ -113,7 +105,6 @@ local function createGui()
     })
     tween:Play()
     
-    -- Thêm hiệu ứng fade in
     background.BackgroundTransparency = 1
     mainText.TextTransparency = 1
     creditText.TextTransparency = 1
@@ -143,14 +134,31 @@ local function resetCharacter()
     end
 end
 
--- Position lock function - TẮT POSITION LOCK
+-- Position lock function
 local function startPositionLock()
-    -- Không làm gì cả - tắt position lock
+    if isLocked then return end
+    isLocked = true
+    
+    if _G.positionLockConnection then
+        _G.positionLockConnection:Disconnect()
+    end
+    
+    _G.positionLockConnection = RunService.Heartbeat:Connect(function()
+        if humanoidRootPart and currentChestCFrame and isLocked then
+            humanoidRootPart.CFrame = currentChestCFrame
+            humanoidRootPart.Velocity = Vector3.new(0, 0, 0)
+            humanoidRootPart.RotVelocity = Vector3.new(0, 0, 0)
+        end
+    end)
 end
 
 -- Stop position lock
 local function stopPositionLock()
-    -- Không làm gì cả - tắt position lock
+    isLocked = false
+    if _G.positionLockConnection then
+        _G.positionLockConnection:Disconnect()
+        _G.positionLockConnection = nil
+    end
 end
 
 -- Force jump function
@@ -168,10 +176,9 @@ local function forceJump()
     end
 end
 
--- Direct teleport function with jump mechanism
+-- Teleport to chest function
 local function teleportToChest(area, index)
     if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
-        warn("Character hoặc HumanoidRootPart không tìm thấy")
         return false
     end
     
@@ -211,60 +218,61 @@ local function collectChestsContinuously()
     while true do
         local totalChestsInCycle = 0
         
-        -- Chỉ farm trong khu vực mục tiêu hiện tại
+        startPositionLock()
+        
+        -- Farm trong khu vực mục tiêu hiện tại
         local chestPath = workspace.Map:FindFirstChild(targetArea)
         if chestPath then
-            local chestsFolder = chestPath:FindFirstChild("Chests")
-            if chestsFolder then
-                local allChests = chestsFolder:GetChildren()
+            local chests = chestPath:FindFirstChild("Chests")
+            if chests then
+                local allChests = chests:GetChildren()
                 
                 for index, chest in ipairs(allChests) do
                     if chest:IsA("BasePart") then
-                        local success = pcall(function()
-                            if teleportToChest(targetArea, index) then
-                                totalChestsInCycle = totalChestsInCycle + 1
-                                print(string.format("Area: %s | Chest %d/%d", 
-                                    targetArea, index, #allChests))
-                            end
-                        end)
+                        if teleportToChest(targetArea, index) then
+                            totalChestsInCycle = totalChestsInCycle + 1
+                            print(string.format("Area: %s | Chest %d/%d", 
+                                targetArea, index, #allChests))
+                        end
                     end
                 end
             end
         end
         
+        stopPositionLock()
+        
         if totalChestsInCycle > 0 then
-            print(string.format("All chests collected in %s (%d chests)! Resetting and switching to next area...", targetArea, totalChestsInCycle))
+            print(string.format("All chests collected in %s (%d chests)! Resetting...", targetArea, totalChestsInCycle))
             
-            -- ===== RESET NHÂN VẬT =====
             task.wait(0.5)
             resetCharacter()
             
-            -- ===== CHUYỂN SANG AREA TIẾP THEO =====
+            -- Chuyển sang area tiếp theo
             currentAreaIndex = currentAreaIndex + 1
             if currentAreaIndex > #CONFIG.AREAS_ROTATION then
                 currentAreaIndex = 1
             end
             targetArea = CONFIG.AREAS_ROTATION[currentAreaIndex]
-            print(string.format("Next area: %s", targetArea))
             
-            -- Chờ nhân vật spawn
+            -- Chờ respawn
             player.CharacterAdded:Wait()
             task.wait(CONFIG.DELAY_AFTER_RESET)
             humanoidRootPart = player.Character:WaitForChild("HumanoidRootPart")
             humanoid = player.Character:WaitForChild("Humanoid")
             
-            -- ===== TELEPORT ĐẾN AREA MỚI NGAY SAU KHI SPAWN =====
+            -- Teleport đến area mới
             local areaPath = workspace.Map:FindFirstChild(targetArea)
             if areaPath then
-                local spawnPoint = areaPath:FindFirstChild("SpawnLocation") or areaPath
-                if humanoidRootPart then
-                    humanoidRootPart.CFrame = spawnPoint.CFrame * CFrame.new(0, 5, 0)
-                    print(string.format("Teleported to %s!", targetArea))
+                local chests = areaPath:FindFirstChild("Chests")
+                if chests and chests:GetChildren()[1] then
+                    humanoidRootPart.CFrame = chests:GetChildren()[1].CFrame * CFrame.new(0, 5, 0)
                 end
             end
-            -- ===== HẾT TELEPORT =====
+            
+            print(string.format("Switched to area: %s", targetArea))
         else
-            warn("No chests found!")
+            warn("No chests found in " .. targetArea)
+            task.wait(1)
         end
         
         task.wait(0.1)
@@ -282,7 +290,7 @@ end)
 
 -- Cleanup on script stop
 game:GetService("Players").LocalPlayer.CharacterRemoving:Connect(function()
-    -- Cleanup nếu cần
+    stopPositionLock()
 end)
 
 -- Start the script
