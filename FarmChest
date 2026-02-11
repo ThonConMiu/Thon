@@ -10,7 +10,7 @@ local humanoid = character:WaitForChild("Humanoid")
 
 -- Configuration
 local CONFIG = {
-    DELAY_BETWEEN_TPS = 1.25,
+    DELAY_BETWEEN_TPS = 0.5,
     MIN_CHESTS = 7,
     MAX_CHESTS = 10,
     HEIGHT_OFFSET = 3,
@@ -144,35 +144,14 @@ local function resetCharacter()
     end
 end
 
--- Position lock function
+-- Position lock function - TẮT POSITION LOCK
 local function startPositionLock()
-    if isLocked then return end
-    isLocked = true
-    
-    -- Disconnect existing connection if any
-    if _G.positionLockConnection then
-        _G.positionLockConnection:Disconnect()
-    end
-    
-    -- Create new connection
-    _G.positionLockConnection = RunService.Heartbeat:Connect(function()
-        if humanoidRootPart and currentChestCFrame and isLocked then
-            humanoidRootPart.CFrame = currentChestCFrame
-            
-            -- Lock velocity
-            humanoidRootPart.Velocity = Vector3.new(0, 0, 0)
-            humanoidRootPart.RotVelocity = Vector3.new(0, 0, 0)
-        end
-    end)
+    -- Không làm gì cả - tắt position lock
 end
 
 -- Stop position lock
 local function stopPositionLock()
-    isLocked = false
-    if _G.positionLockConnection then
-        _G.positionLockConnection:Disconnect()
-        _G.positionLockConnection = nil
-    end
+    -- Không làm gì cả - tắt position lock
 end
 
 -- Force jump function
@@ -241,8 +220,6 @@ local function teleportToChest(area, index)
             currentResetTarget = math.random(CONFIG.MIN_CHESTS, CONFIG.MAX_CHESTS)
             print(string.format("Next reset will be after %d chests", currentResetTarget))
             
-            -- Stop position lock before reset
-            stopPositionLock()
             task.wait(0.5)
             resetCharacter()
             
@@ -264,9 +241,6 @@ local function collectChestsContinuously()
     local gui, label = createGui()
     
     while true do
-        -- Start position lock at the beginning of chest collection
-        startPositionLock()
-        
         local totalChestsInCycle = 0
         
         -- Duyệt qua từng area (thay vì ChestModels folder)
@@ -298,11 +272,8 @@ local function collectChestsContinuously()
             end
         end
         
-        -- Stop position lock after collecting all chests
-        stopPositionLock()
-        
         if totalChestsInCycle > 0 then
-            print(string.format("All chests collected (%d chests), position unlocked!", totalChestsInCycle))
+            print(string.format("All chests collected (%d chests)!", totalChestsInCycle))
         else
             warn("No chests found in any area!")
         end
@@ -324,7 +295,7 @@ end)
 
 -- Cleanup on script stop
 game:GetService("Players").LocalPlayer.CharacterRemoving:Connect(function()
-    stopPositionLock()
+    -- Cleanup nếu cần
 end)
 
 -- Start the script
