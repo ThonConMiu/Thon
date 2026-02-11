@@ -2,7 +2,7 @@
 -- CHEST FARM SCRIPT - BLOX FRUITS (OPTIMIZED)
 -- ============================================
 _G.AutoFarmChest = false
-_G.ChestBypass = false
+_G.ChestBypass = true
 _G.StopChest = true
 _G.MagnitudeAdd = 0
 AutoFarmChest = false
