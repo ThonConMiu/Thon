@@ -1,0 +1,184 @@
+-- Chest Farm Script
+-- Script tự động farm chest cho Blox Fruits
+
+-- Biến toàn cục
+_G.AutoFarmChest = false
+_G.ChestBypass = false
+_G.StopChest = false
+_G.MagnitudeAdd = 0
+AutoFarmChest = false
+ChestESP = false
+
+-- Function hiển thị ESP cho Chest
+function UpdateChestChams() 
+    for i,v in pairs(game.Workspace:GetChildren()) do
+        pcall(function()
+            if string.find(v.Name,"Chest") then
+                if ChestESP then
+                    if string.find(v.Name,"Chest") then
+                        if not v:FindFirstChild('NameEsp'..Number) then
+                            local bill = Instance.new('BillboardGui',v)
+                            bill.Name = 'NameEsp'..Number
+                            bill.ExtentsOffset = Vector3.new(0, 1, 0)
+                            bill.Size = UDim2.new(1,200,1,30)
+                            bill.Adornee = v
+                            bill.AlwaysOnTop = true
+                            local name = Instance.new('TextLabel',bill)
+                            name.Font = Enum.Font.GothamSemibold
+                            name.FontSize = "Size14"
+                            name.TextWrapped = true
+                            name.Size = UDim2.new(1,0,1,0)
+                            name.TextYAlignment = 'Top'
+                            name.BackgroundTransparency = 1
+                            name.TextStrokeTransparency = 0.5
+                            if v.Name == "Chest1" then
+                                name.TextColor3 = Color3.fromRGB(109, 109, 109)
+                                name.Text = ("Chest 1" ..' \n'.. round((game:GetService('Players').LocalPlayer.Character.Head.Position - v.Position).Magnitude/3) ..' Distance')
+                            end
+                            if v.Name == "Chest2" then
+                                name.TextColor3 = Color3.fromRGB(173, 158, 21)
+                                name.Text = ("Chest 2" ..' \n'.. round((game:GetService('Players').LocalPlayer.Character.Head.Position - v.Position).Magnitude/3) ..' Distance')
+                            end
+                            if v.Name == "Chest3" then
+                                name.TextColor3 = Color3.fromRGB(85, 255, 255)
+                                name.Text = ("Chest 3" ..' \n'.. round((game:GetService('Players').LocalPlayer.Character.Head.Position - v.Position).Magnitude/3) ..' Distance')
+                            end
+                        else
+                            v['NameEsp'..Number].TextLabel.Text = (v.Name ..'   \n'.. round((game:GetService('Players').LocalPlayer.Character.Head.Position - v.Position).Magnitude/3) ..' Distance')
+                        end
+                    end
+                else
+                    if v:FindFirstChild('NameEsp'..Number) then
+                        v:FindFirstChild('NameEsp'..Number):Destroy()
+                    end
+                end
+            end
+        end)
+    end
+end
+
+-- Function đếm số lượng chest
+function CountChests()
+    local count = 0
+    for i,v in pairs(game.workspace:GetChildren()) do
+        if string.find(v.Name,"Chest") and v:IsA("Part") then
+            count = count + 1
+        end
+    end
+    return count
+end
+
+-- Function round number
+function round(num)
+    return math.floor(num + 0.5)
+end
+
+-- Function teleport (giả sử có hàm topos trong script gốc)
+function topos(CFrame)
+    -- Thay thế bằng hàm tween của bạn
+    game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame
+end
+
+-- Function dừng tween
+function StopTween(toggle)
+    -- Thêm logic dừng tween nếu cần
+end
+
+-- Script đếm chest
+spawn(function()
+    while wait(5) do
+        local chestCount = CountChests()
+        print("Chest hiện tại: " .. chestCount)
+    end
+end)
+
+-- Script dừng khi có Dark Key hoặc God's Chalice
+spawn(function()
+    while wait() do
+        if _G.StopChest then
+            if game.Players.LocalPlayer.Backpack:FindFirstChild("Fist of Darkness") or 
+               game.Players.LocalPlayer.Character:FindFirstChild("Fist of Darkness") or 
+               game.Players.LocalPlayer.Backpack:FindFirstChild("God's Chalice") or 
+               game.Players.LocalPlayer.Character:FindFirstChild("God's Chalice") then
+                AutoFarmChest = false
+                _G.AutoFarmChest = false
+                StopTween(AutoFarmChest)
+                print("Đã tìm thấy Dark Key hoặc God's Chalice - Dừng farm chest!")
+            end
+        end
+    end
+end)
+
+-- Script farm chest chính
+spawn(function()
+    while wait() do 
+        if AutoFarmChest then
+            for i,v in pairs(game:GetService("Workspace"):GetChildren()) do 
+                if v.Name:find("Chest") then
+                    if game:GetService("Workspace"):FindFirstChild(v.Name) then
+                        if (v.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude <= 5000+_G.MagnitudeAdd then
+                            repeat wait()
+                                if game:GetService("Workspace"):FindFirstChild(v.Name) then
+                                    topos(v.CFrame)
+                                end
+                            until AutoFarmChest == false or not v.Parent
+                            topos(game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.CFrame)
+                            _G.MagnitudeAdd = _G.MagnitudeAdd+1500
+                            break
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
+-- Script farm chest bypass (nhanh)
+spawn(function()
+    while wait() do
+        if _G.ChestBypass then
+            pcall(function()
+                for i,v in pairs(game:GetService("Workspace"):GetChildren()) do
+                    if string.find(v.Name, "Chest") then
+                        print(v.Name)
+                        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = v.CFrame
+                        wait(.15)
+                    end
+                end
+                game.Players.LocalPlayer.Character.Head:Destroy()
+                for _,v in pairs(game:GetService("Workspace"):GetDescendants()) do
+                    if string.find(v.Name, "Chest") and v:IsA("TouchTransmitter") then
+                        firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, v.Parent, 0) --0 is touch
+                        wait()
+                        firetouchinterest(game.Players.LocalPlayer.Character.HumanoidRootPart, v.Parent, 1) -- 1 is untouch
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Script set team Pirates khi dùng ChestBypass
+spawn(function()
+    while task.wait() do
+        if _G.ChestBypass then
+            local ohString1 = "SetTeam"
+            local ohString2 = "Pirates"
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer(ohString1, ohString2)
+        end
+    end
+end)
+
+-- Hướng dẫn sử dụng
+print("=== CHEST FARM SCRIPT ===")
+print("Cách sử dụng:")
+print("1. Farm chest thường: _G.AutoFarmChest = true hoặc AutoFarmChest = true")
+print("2. Farm chest nhanh (bypass): _G.ChestBypass = true")
+print("3. Dừng khi có Dark Key/God's Chalice: _G.StopChest = true")
+print("4. Bật ESP cho chest: ChestESP = true")
+print("")
+print("Ví dụ:")
+print("AutoFarmChest = true  -- Bật farm chest")
+print("_G.ChestBypass = true -- Bật farm nhanh")
+print("_G.StopChest = true   -- Dừng khi có item quý")
+print("========================")
