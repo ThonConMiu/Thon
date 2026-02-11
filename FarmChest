@@ -3,7 +3,7 @@
 
 -- Biến toàn cục
 _G.AutoFarmChest = false
-_G.ChestBypass = false
+_G.ChestBypass = true
 _G.StopChest = false
 _G.MagnitudeAdd = 0
 AutoFarmChest = false
