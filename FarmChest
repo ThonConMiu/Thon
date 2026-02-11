@@ -10,7 +10,7 @@ local humanoid = character:WaitForChild("Humanoid")
 
 -- Configuration
 local CONFIG = {
-    DELAY_BETWEEN_TPS = 0.5,
+    DELAY_BETWEEN_TPS = 0.25,
     MIN_CHESTS = 7,
     MAX_CHESTS = 10,
     HEIGHT_OFFSET = 3,
